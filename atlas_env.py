@@ -155,30 +155,55 @@ def main():
         kd = 2*np.sqrt(kp) if kd is None else kd
         last_joint_errors = None
 
-        def position_pid(joint_spss):
+        def fix_sp(sp, joint_idx):
+            if np.isnan(sp):
+                return sp
+            start, end = env.model.jnt_range[joint_idx]
+            print(sp)
+            sp = (sp % (2*np.pi))
+            print(sp)
+            if sp > end:
+                sp = sp - 2 * np.pi
+            print(start, end, sp)
+            # assert sp > start and sp < end
+            return sp
+
+        def position_pid(joint_sps):
             nonlocal kd
             nonlocal kp
             nonlocal last_joint_errors
             joint_pvs = []
-            joint_sps = [(p % (2*np.pi)) for p in joint_spss]
+            # joint_sps = [(p % (2*np.pi)) for p in joint_spss]
             for c in range(len(env.sim.data.ctrl)):
                 actuator_name = env.sim.model.actuator_id2name(c)
                 joint_idx = env.sim.model.joint_name2id(actuator_name[:-9])
                 qpos_joint_idx = env.sim.model.jnt_qposadr[joint_idx]
                 joint_pvs.append(env.sim.data.qpos[qpos_joint_idx] % (2*np.pi))
+
+                joint_sps[c] = fix_sp(joint_sps[c], joint_idx)
             
             torques = []
             joint_errors = []
             for i in range(len(joint_pvs)):
-                if joint_sps[i] is None: #no position control for this one
+                if np.isnan(joint_sps[i]) or joint_sps[i] is None: #no position control for this one
+                    # print('index', i, 'is none')
                     torques.append(0)
                     joint_errors.append(0)
                     continue
                 joint_error = joint_sps[i] - joint_pvs[i]
+                if joint_error > np.pi:
+                    joint_error = joint_error - 2 * np.pi
+                if joint_error < -np.pi:
+                    joint_error = joint_error + 2 * np.pi   
+                print(joint_sps[i], joint_pvs[i],joint_error)
+                assert abs(joint_error) < np.pi
+                # print('joint error', joint_error, joint_sps[i], joint_pvs[i])
                 torque = kp * joint_error
                 joint_errors.append(joint_error)
+                # print('joint', i, 'error', joint_error, 'position', joint_pvs[i], 'setpoint', joint_sps[i])
                 if last_joint_errors is not None:
                     torque += kd * (joint_errors[i] - last_joint_errors[i]) /env.dt
+                    # print('kding')
                 torques.append(torque)
             last_joint_errors = joint_errors
 
@@ -416,25 +441,19 @@ def main():
                 if phi > 0.3 and foot_strike: #checks phi since there is some time for swinging the leg
                     break
 
-                target_swing_foot_pos = foot_pos_gen(   phi, env, 0.05, 0.01, swing_foot_position_start[0],
+                target_swing_foot_pos = foot_pos_gen(   phi, env, 0.05, -2, swing_foot_position_start[0],
                                                         swing_foot_position_start[1])
 
                 #Use inverse kinematics for the stance foot to stay at the current position
                 #it should probably use only the ankle and hip as the route, but maintain the position
                 #in everything else (that could be a problem, since in the change swing->stance
                 # it could happen that the leg will jerk to get to the correct position)
-                p1, s, s1 = inverse_kinematics_LM(stance_leg_id,stance_foot_rot,
-                                             stance_foot_position, reset_pos=True)
-                p2, s, s2 = inverse_kinematics_LM(swing_leg_id,swing_foot_rot,
-                                             target_swing_foot_pos, reset_pos=True)
+                positions_raw, s = chain_ik([   lambda: inverse_kinematics_LM(stance_leg_id,stance_foot_rot,
+                                             stance_foot_position, reset_pos=False),
+                                            lambda: inverse_kinematics_LM(swing_leg_id,swing_foot_rot,
+                                             target_swing_foot_pos, reset_pos=False)])
                 
-                positions = []
-                for a, b in zip(p1, p2):
-                    assert np.isnan(a) or np.isnan(b)
-                    if np.isnan(a) and np.isnan(b):
-                        positions.append(0)
-                    else:
-                        positions.append(a if np.isnan(b) else b)
+                positions = [0 if np.isnan(p) else p for p in positions_raw]
 
                 env._get_viewer().add_marker(pos=stance_foot_position, size=[0.05, 0.05, 0.05], rgba=[1,0,0,1], label="stance", mat=stance_foot_rot)
                 env._get_viewer().add_marker(pos=target_swing_foot_pos, size=[0.05, 0.05, 0.05], rgba=[0,1,0,1], label="swing", mat=swing_foot_rot)
@@ -444,7 +463,7 @@ def main():
 
                 action = position_torque + compensate_gravity(stance_leg)
 
-                observation, reward, done, _ = env.step(positions)
+                observation, reward, done, _ = env.step(action)
                 total_reward += reward
                 env.render()
 

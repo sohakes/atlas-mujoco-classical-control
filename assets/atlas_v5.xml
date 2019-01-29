@@ -369,7 +369,7 @@
 
 
 
-        <!-- <motor name="back_bkz_actuator"  joint="back_bkz" gear="1"/>
+        <motor name="back_bkz_actuator"  joint="back_bkz" gear="1"/>
 		<motor name="back_bky_actuator"  joint="back_bky" gear="1"/>
 		<motor name="back_bkx_actuator"  joint="back_bkx" gear="1"/>
 		
@@ -401,9 +401,9 @@
 		<motor name="r_leg_hpy_actuator" joint="r_leg_hpy" gear="1"/>
 		<motor name="r_leg_kny_actuator" joint="r_leg_kny" gear="1"/>
 		<motor name="r_leg_aky_actuator" joint="r_leg_aky" gear="1"/>
-		<motor name="r_leg_akx_actuator" joint="r_leg_akx" gear="1"/> -->
+		<motor name="r_leg_akx_actuator" joint="r_leg_akx" gear="1"/>
 
-        <position name="back_bkz_actuator"  joint="back_bkz" gear="1"/>
+        <!-- <position name="back_bkz_actuator"  joint="back_bkz" gear="1"/>
 		<position name="back_bky_actuator"  joint="back_bky" gear="1"/>
 		<position name="back_bkx_actuator"  joint="back_bkx" gear="1"/>
 		
@@ -435,7 +435,7 @@
 		<position name="r_leg_hpy_actuator" joint="r_leg_hpy" gear="1"/>
 		<position name="r_leg_kny_actuator" joint="r_leg_kny" gear="1"/>
 		<position name="r_leg_aky_actuator" joint="r_leg_aky" gear="1"/>
-		<position name="r_leg_akx_actuator" joint="r_leg_akx" gear="1"/>
+		<position name="r_leg_akx_actuator" joint="r_leg_akx" gear="1"/> -->
 		
 	</actuator>
 	
